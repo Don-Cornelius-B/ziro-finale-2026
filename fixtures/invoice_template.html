@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Invoice Receipt - {{ invoice_id }}</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    body {
+      background: #f8fafc;
+      padding: 30px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .invoice-card {
+      background: #ffffff;
+      width: 580px;
+      border-radius: 12px;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
+      overflow: hidden;
+    }
+    .header {
+      background: linear-gradient(135deg, #1e293b, #0f172a);
+      color: #ffffff;
+      padding: 24px 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .header .brand {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 9999px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .badge-paid { background: #dcfce7; color: #15803d; }
+    .badge-pending { background: #fef3c7; color: #b45309; }
+    .badge-disputed { background: #fee2e2; color: #b91c1c; }
+    .badge-partial { background: #e0e7ff; color: #4338ca; }
+    .badge-inactive { background: #f1f5f9; color: #475569; }
+
+    .content {
+      padding: 24px 28px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      row-gap: 16px;
+      column-gap: 24px;
+      margin-bottom: 24px;
+    }
+    .field-label {
+      font-size: 11px;
+      color: #64748b;
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+    .field-value {
+      font-size: 14px;
+      font-weight: 600;
+      color: #1e293b;
+    }
+    .divider {
+      height: 1px;
+      background: #e2e8f0;
+      margin: 16px 0;
+    }
+    .financials {
+      background: #f8fafc;
+      border-radius: 8px;
+      padding: 16px 20px;
+      border: 1px solid #f1f5f9;
+    }
+    .financial-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      color: #475569;
+      margin-bottom: 8px;
+    }
+    .financial-row.total {
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px dashed #cbd5e1;
+      font-size: 16px;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 0;
+    }
+    .footer {
+      background: #f8fafc;
+      border-top: 1px solid #e2e8f0;
+      padding: 14px 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      color: #94a3b8;
+    }
+    .seal-pill {
+      font-family: monospace;
+      font-size: 10px;
+      color: #64748b;
+      background: #e2e8f0;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="invoice-card">
+    <div class="header">
+      <div>
+        <div class="brand">ZIRO ACADEMY</div>
+        <div style="font-size: 12px; color: #94a3b8; margin-top: 2px;">Official Fee Statement & Invoice</div>
+      </div>
+      <div>
+        <span class="badge {{ badge_class }}">{{ status_label }}</span>
+      </div>
+    </div>
+    <div class="content">
+      <div class="grid">
+        <div>
+          <div class="field-label">Student Name</div>
+          <div class="field-value">{{ student_name }}</div>
+        </div>
+        <div>
+          <div class="field-label">Student ID</div>
+          <div class="field-value">{{ student_id }}</div>
+        </div>
+        <div>
+          <div class="field-label">Invoice Reference</div>
+          <div class="field-value">{{ invoice_id }}</div>
+        </div>
+        <div>
+          <div class="field-label">Transaction ID</div>
+          <div class="field-value">{{ txn_id }}</div>
+        </div>
+        <div>
+          <div class="field-label">Student Email</div>
+          <div class="field-value">{{ email }}</div>
+        </div>
+        <div>
+          <div class="field-label">Billing Date</div>
+          <div class="field-value">{{ billing_date }}</div>
+        </div>
+      </div>
+
+      <div class="financials">
+        <div class="financial-row">
+          <span>Total Fee / Amount Due</span>
+          <span>{{ currency }} {{ amount_due }}</span>
+        </div>
+        <div class="financial-row">
+          <span>Amount Captured (Gateway)</span>
+          <span style="color: #16a34a; font-weight: 600;">{{ currency }} {{ amount_paid }}</span>
+        </div>
+        <div class="financial-row total">
+          <span>Net Outstanding Balance</span>
+          <span style="color: {{ balance_color }};">{{ currency }} {{ balance_due }}</span>
+        </div>
+      </div>
+    </div>
+    <div class="footer">
+      <span>Reconciliation Engine: Problem 06 Grand Finale</span>
+      <span class="seal-pill">SEAL: {{ seal_short }}</span>
+    </div>
+  </div>
+</body>
+</html>
