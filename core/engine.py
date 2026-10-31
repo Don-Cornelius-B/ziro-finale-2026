@@ -454,3 +454,4 @@ def _record_ledger_entry(
     conn.commit()
     conn.close()
     return entry_id
+

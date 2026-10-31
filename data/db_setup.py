@@ -231,3 +231,4 @@ def init_db(db_path=DEFAULT_DB_PATH, prewarm=True):
 
 if __name__ == "__main__":
     init_db()
+

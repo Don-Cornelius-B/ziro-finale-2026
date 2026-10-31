@@ -389,3 +389,4 @@ with tab3:
         st.dataframe(df_ledger, use_container_width=True)
     else:
         st.info("Audit ledger is clean. Approve or reject proposals in Tab 2 to witness real-time cryptographic state seals.")
+
