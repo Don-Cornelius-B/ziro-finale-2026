@@ -116,6 +116,19 @@ def reconcile_drift_engine(
             t = fraud_txns[0]
             prop_id = f"PROP-{sid}-FRAUD"
             audit_hash = compute_canonical_audit_hash(sid, t["txn_id"], prop_id)
+            preview_meta = {
+                "student_id": sid,
+                "student_name": student_name,
+                "invoice_id": invoice_id,
+                "txn_id": t["txn_id"],
+                "email": crm_entry.get("student_email"),
+                "amount_due": amount_due,
+                "amount_paid": t.get("amount", 0.0),
+                "balance_due": "DISPUTED",
+                "status_label": "CHARGEBACK DISPUTE",
+                "badge_class": "badge-disputed",
+                "balance_color": "#b91c1c"
+            }
             proposals.append({
                 "proposal_id": prop_id,
                 "student_id": sid,
@@ -127,7 +140,7 @@ def reconcile_drift_engine(
                 "evidence_quote": f"Transaction {t['txn_id']} status='disputed', chargeback=True detected in Gateway metadata.",
                 "proposed_fix": "REFUSE AUTOMATED OVERRIDE: Hard freeze account, halt automated mutations, escalate to Anti-Fraud Compliance.",
                 "requires_human_approval": True,
-                "invoice_preview_path": generate_invoice_screenshot({"student_id": sid}),
+                "invoice_preview_path": generate_invoice_screenshot(preview_meta, db_path=db_path),
                 "audit_hash": audit_hash,
                 "delta": {"block_action": True, "reason": "AML_CHARGEBACK_RISK"}
             })
@@ -139,6 +152,19 @@ def reconcile_drift_engine(
             t = refund_txns[0]
             prop_id = f"PROP-{sid}-REFUND"
             audit_hash = compute_canonical_audit_hash(sid, t["txn_id"], prop_id)
+            preview_meta = {
+                "student_id": sid,
+                "student_name": student_name,
+                "invoice_id": invoice_id,
+                "txn_id": t["txn_id"],
+                "email": crm_entry.get("student_email"),
+                "amount_due": amount_due,
+                "amount_paid": t.get("amount", 0.0),
+                "balance_due": "0.00",
+                "status_label": "REFUND PENDING",
+                "badge_class": "badge-pending",
+                "balance_color": "#b45309"
+            }
             proposals.append({
                 "proposal_id": prop_id,
                 "student_id": sid,
@@ -150,7 +176,7 @@ def reconcile_drift_engine(
                 "evidence_quote": f"Gateway TXN {t['txn_id']} is refund_pending. CRM active access needs grace period hold.",
                 "proposed_fix": "Stage 7-day grace period hold on CRM access; suppress automated overdue reminders.",
                 "requires_human_approval": True,
-                "invoice_preview_path": generate_invoice_screenshot({"student_id": sid}),
+                "invoice_preview_path": generate_invoice_screenshot(preview_meta, db_path=db_path),
                 "audit_hash": audit_hash,
                 "delta": {"crm_status": "grace_period", "dunning_status": "suppressed"}
             })
@@ -162,6 +188,19 @@ def reconcile_drift_engine(
             t = failed_txns[0]
             prop_id = f"PROP-{sid}-REVOKE"
             audit_hash = compute_canonical_audit_hash(sid, t["txn_id"], prop_id)
+            preview_meta = {
+                "student_id": sid,
+                "student_name": student_name,
+                "invoice_id": invoice_id,
+                "txn_id": t["txn_id"],
+                "email": crm_entry.get("student_email"),
+                "amount_due": amount_due,
+                "amount_paid": 0.0,
+                "balance_due": amount_due,
+                "status_label": "PAYMENT FAILED",
+                "badge_class": "badge-disputed",
+                "balance_color": "#b91c1c"
+            }
             proposals.append({
                 "proposal_id": prop_id,
                 "student_id": sid,
@@ -173,7 +212,7 @@ def reconcile_drift_engine(
                 "evidence_quote": f"Gateway TXN {t['txn_id']} failed, but CRM course_access_status is '{crm_status}' (Free-riding).",
                 "proposed_fix": "Revoke course access immediately; update CRM to 'inactive' and notify finance team.",
                 "requires_human_approval": True,
-                "invoice_preview_path": generate_invoice_screenshot({"student_id": sid}),
+                "invoice_preview_path": generate_invoice_screenshot(preview_meta, db_path=db_path),
                 "audit_hash": audit_hash,
                 "delta": {"crm_status": "inactive", "invoice_status": "unpaid", "dunning_status": "payment_failed_alert"}
             })
@@ -185,6 +224,20 @@ def reconcile_drift_engine(
             dup_txn = captured_txns[1]
             prop_id = f"PROP-{sid}-DUP"
             audit_hash = compute_canonical_audit_hash(sid, dup_txn["txn_id"], prop_id)
+            total_paid = sum(t["amount"] for t in captured_txns)
+            preview_meta = {
+                "student_id": sid,
+                "student_name": student_name,
+                "invoice_id": invoice_id,
+                "txn_id": f"{captured_txns[0]['txn_id']}, {dup_txn['txn_id']}",
+                "email": crm_entry.get("student_email"),
+                "amount_due": amount_due,
+                "amount_paid": total_paid,
+                "balance_due": f"-{total_paid - amount_due:,.2f} (CREDIT)",
+                "status_label": "DUPLICATE OVERPAYMENT",
+                "badge_class": "badge-pending",
+                "balance_color": "#4338ca"
+            }
             proposals.append({
                 "proposal_id": prop_id,
                 "student_id": sid,
@@ -196,7 +249,7 @@ def reconcile_drift_engine(
                 "evidence_quote": f"Multiple captured payments ({len(captured_txns)}) totaling ₹{sum(t['amount'] for t in captured_txns):,.2f} for single invoice {invoice_id} of ₹{amount_due:,.2f}.",
                 "proposed_fix": f"Auto-stage refund ticket for duplicate capture {dup_txn['txn_id']} (₹{dup_txn['amount']:,.2f}); preserve active student entitlement.",
                 "requires_human_approval": True,
-                "invoice_preview_path": generate_invoice_screenshot({"student_id": sid}),
+                "invoice_preview_path": generate_invoice_screenshot(preview_meta, db_path=db_path),
                 "audit_hash": audit_hash,
                 "delta": {"refund_txn": dup_txn["txn_id"], "refund_amount": dup_txn["amount"]}
             })
@@ -213,6 +266,19 @@ def reconcile_drift_engine(
                 prop_id = f"PROP-{sid}-PARTIAL"
                 audit_hash = compute_canonical_audit_hash(sid, t["txn_id"], prop_id)
                 rem = bal_check["remaining_due"]
+                preview_meta = {
+                    "student_id": sid,
+                    "student_name": student_name,
+                    "invoice_id": invoice_id,
+                    "txn_id": t["txn_id"],
+                    "email": crm_entry.get("student_email"),
+                    "amount_due": amount_due,
+                    "amount_paid": captured_amt,
+                    "balance_due": rem,
+                    "status_label": "PARTIALLY PAID",
+                    "badge_class": "badge-partial",
+                    "balance_color": "#4338ca"
+                }
                 proposals.append({
                     "proposal_id": prop_id,
                     "student_id": sid,
@@ -224,7 +290,7 @@ def reconcile_drift_engine(
                     "evidence_quote": f"Captured payment ₹{captured_amt:,.2f} is less than fee ₹{amount_due:,.2f}. Outstanding balance ₹{rem:,.2f}.",
                     "proposed_fix": f"Update invoice amount_paid to ₹{captured_amt:,.2f}, set invoice to 'partially_paid', adjust CRM dunning for ₹{rem:,.2f}.",
                     "requires_human_approval": True,
-                    "invoice_preview_path": generate_invoice_screenshot({"student_id": sid}),
+                    "invoice_preview_path": generate_invoice_screenshot(preview_meta, db_path=db_path),
                     "audit_hash": audit_hash,
                     "delta": {"invoice_paid": captured_amt, "invoice_status": "partially_paid", "dunning_status": "partial_overdue"}
                 })
@@ -233,12 +299,27 @@ def reconcile_drift_engine(
             # Check for Paid But Not Activated (TC01 or TC08)
             if bal_check["is_balanced"] and (crm_status != "active" or dunning_status == "daily_overdue_active"):
                 detected_type = DetectedClass.PAID_BUT_NOT_ACTIVATED.value
+                is_parent_payer = False
                 # If matching strategy resolved through student_id fallback (parent email)
                 if t.get("metadata_json") and "parent" in t["metadata_json"]:
                     detected_type = DetectedClass.IDENTITY_DRIFT_RESOLVED.value
+                    is_parent_payer = True
 
                 prop_id = f"PROP-{sid}-ACTIVATE"
                 audit_hash = compute_canonical_audit_hash(sid, t["txn_id"], prop_id)
+                preview_meta = {
+                    "student_id": sid,
+                    "student_name": student_name,
+                    "invoice_id": invoice_id,
+                    "txn_id": t["txn_id"],
+                    "email": crm_entry.get("student_email"),
+                    "amount_due": amount_due,
+                    "amount_paid": captured_amt,
+                    "balance_due": "0.00",
+                    "status_label": "RESOLVED (PARENT PAYER)" if is_parent_payer else "PAID - ACTIVATION PENDING",
+                    "badge_class": "badge-paid",
+                    "balance_color": "#16a34a"
+                }
                 proposals.append({
                     "proposal_id": prop_id,
                     "student_id": sid,
@@ -250,7 +331,7 @@ def reconcile_drift_engine(
                     "evidence_quote": f"Full payment ₹{captured_amt:,.2f} verified in Gateway, but CRM status is '{crm_status}' and dunning is '{dunning_status}'.",
                     "proposed_fix": "Activate CRM course access, mark invoice as 'paid', dispatch webhook to silence dunning reminders immediately.",
                     "requires_human_approval": True,
-                    "invoice_preview_path": generate_invoice_screenshot({"student_id": sid}),
+                    "invoice_preview_path": generate_invoice_screenshot(preview_meta, db_path=db_path),
                     "audit_hash": audit_hash,
                     "delta": {"crm_status": "active", "invoice_status": "paid", "dunning_status": "none", "invoice_paid": captured_amt}
                 })

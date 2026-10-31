@@ -334,6 +334,14 @@ def seed_random_drifts(
     cursor.execute("DELETE FROM audit_ledger")
     conn.commit()
 
+    # Evict previous dynamic chaos invoice caches so fresh screenshots reflect current seed
+    if CACHE_DIR.exists():
+        for f in CACHE_DIR.glob("STU-R*.png"):
+            try:
+                f.unlink()
+            except Exception:
+                pass
+
     # 1. Assemble drift archetypes list with GUARANTEED fraud inclusion
     selected_drifts: List[str] = []
     if num_drifts > 0:
